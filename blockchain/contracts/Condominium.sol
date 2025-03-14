@@ -11,9 +11,9 @@ contract Condominium {
         manager = msg.sender;
 
         unchecked {
-            for (uint8 i = 1; i <= 2; i++) {
-                for (uint8 j = 1; j <= 5; j++) {
-                    for (uint8 k = 1; k <= 5; k++) {
+            for (uint16 i = 1; i <= 2; i++) {
+                for (uint16 j = 1; j <= 5; j++) {
+                    for (uint16 k = 1; k <= 5; k++) {
                         residences[(i * 1000) + (j * 100) + k] = true;
                     }
                 }
@@ -48,5 +48,18 @@ contract Condominium {
 
     function isResident(address resident) public view returns (bool) {
         return residents[resident] > 0;
+    }
+
+    function addResident(
+        address resident,
+        uint16 residenceId
+    ) external onlyCouncil {
+        require(residenceExists(residenceId), "Residence does not exist");
+        residents[resident] = residenceId;
+    }
+
+    function removeResident(address resident) external onlyManager {
+        require(!counselors[resident], "A counselor cannot be removed");
+        delete residents[resident];
     }
 }
