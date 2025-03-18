@@ -7,6 +7,24 @@ contract Condominium {
     mapping(address => uint16) public residents;
     mapping(address => bool) public counselors;
 
+    enum Status {
+        IDLE,
+        VOTING,
+        APPROVED,
+        DENIED
+    }
+
+    struct Topic {
+        string title;
+        string description;
+        Status status;
+        uint256 createdDate;
+        uint256 startDate;
+        uint256 endDate;
+    }
+
+    mapping(bytes32 => Topic) public topics;
+
     constructor() {
         manager = msg.sender;
 
@@ -22,7 +40,7 @@ contract Condominium {
     }
 
     modifier onlyManager() {
-        require(msg.sender == manager, "Only manager can do this");
+        require(msg.sender == manager, "Only the manager can do this");
         _;
     }
 
@@ -80,5 +98,47 @@ contract Condominium {
     function setManager(address newManager) external onlyManager {
         require(newManager != address(0), "The address must be valid");
         manager = newManager;
+    }
+
+    function getTopic(string memory title) public view returns (Topic memory) {
+        bytes32 topicId = keccak256(bytes(title));
+
+        return topics[topicId];
+    }
+
+    function topicExists(string memory title) public view returns (bool) {
+        return getTopic(title).createdDate > 0;
+    }
+
+    function addTopic(
+        string memory title,
+        string memory description
+    ) external onlyResidents {
+        require(!topicExists(title), "Topic already exists");
+
+        bytes32 topicId = keccak256(bytes(title));
+
+        Topic memory newTopic = Topic({
+            title: title,
+            description: description,
+            status: Status.IDLE,
+            createdDate: block.timestamp,
+            startDate: 0,
+            endDate: 0
+        });
+
+        topics[topicId] = newTopic;
+    }
+
+    function removeTopic(string memory title) external onlyManager {
+        require(topicExists(title), "Topic does not exists");
+
+        Topic memory topic = getTopic(title);
+
+        require(topic.status == Status.IDLE, "Only IDLE topics can be removed");
+
+        bytes32 topicId = keccak256(bytes(title));
+
+        delete topics[topicId];
     }
 }

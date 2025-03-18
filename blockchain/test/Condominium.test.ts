@@ -63,7 +63,7 @@ describe('Condominium', function () {
 
     await expect(
       residentInstance.removeResident(resident.address)
-    ).to.be.revertedWith('Only manager can do this')
+    ).to.be.revertedWith('Only the manager can do this')
   })
 
   it('Should NOT remove resident (counselor)', async function () {
@@ -95,7 +95,7 @@ describe('Condominium', function () {
 
     await expect(
       residentInstance.setCounselor(resident.address, true)
-    ).to.be.revertedWith('Only manager can do this')
+    ).to.be.revertedWith('Only the manager can do this')
   })
 
   it('Should NOT set counselor (resident)', async function () {
@@ -133,7 +133,7 @@ describe('Condominium', function () {
 
     await expect(
       residentInstance.setManager(resident.address)
-    ).to.be.revertedWith('Only manager can do this')
+    ).to.be.revertedWith('Only the manager can do this')
   })
 
   it('Should NOT set manager (address)', async function () {
@@ -141,6 +141,86 @@ describe('Condominium', function () {
 
     await expect(condominium.setManager(ZeroAddress)).to.be.revertedWith(
       'The address must be valid'
+    )
+  })
+
+  it('Should add topic (manager)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await condominium.addTopic('topic 1', 'description 1')
+
+    expect(await condominium.topicExists('topic 1')).to.equal(true)
+  })
+
+  it('Should add topic (resident)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident, 2505)
+
+    const residentInstance = condominium.connect(resident)
+
+    await residentInstance.addTopic('topic 1', 'description 1')
+
+    expect(await condominium.topicExists('topic 1')).to.equal(true)
+  })
+
+  it('Should NOT add topic (permission)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(
+      residentInstance.addTopic('topic 1', 'description 1')
+    ).to.be.revertedWith('Only the manager or the residents can do this')
+  })
+
+  it('Should NOT add topic (topic exists)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await condominium.addTopic('topic 1', 'description 1')
+
+    await expect(
+      condominium.addTopic('topic 1', 'description 1')
+    ).to.be.revertedWith('Topic already exists')
+  })
+
+  it('Should remove topic', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await condominium.addTopic('topic 1', 'description 1')
+
+    await condominium.removeTopic('topic 1')
+
+    expect(await condominium.topicExists('topic 1')).to.equal(false)
+  })
+
+  it('Should NOT remove topic (permission)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(residentInstance.removeTopic('topic 1')).to.be.revertedWith(
+      'Only the manager can do this'
+    )
+  })
+
+  it('Should NOT remove topic (topic not exists)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(condominium.removeTopic('topic 1')).to.be.revertedWith(
+      'Topic does not exists'
+    )
+  })
+
+  it('Should NOT remove topic (status)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await condominium.addTopic('topic 1', 'description 1')
+
+    // TODO: change topic status
+
+    await expect(condominium.removeTopic('topic 1')).to.be.revertedWith(
+      'Topic does not exists'
     )
   })
 })
