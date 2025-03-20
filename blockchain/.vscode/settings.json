@@ -5,5 +5,5 @@
     "source.organizeImports.biome": "explicit"
   },
   "editor.formatOnSave": true,
-  "cSpell.words": ["keccak"]
+  "cSpell.words": ["keccak", "votings"]
 }

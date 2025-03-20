@@ -3,6 +3,20 @@ import { expect } from 'chai'
 import { ZeroAddress } from 'ethers'
 import hre from 'hardhat'
 
+enum Status {
+  IDLE = 0,
+  VOTING = 1,
+  APPROVED = 2,
+  DENIED = 3,
+}
+
+enum Options {
+  EMPTY = 0,
+  YES = 1,
+  NO = 2,
+  ABSTENTION = 3,
+}
+
 describe('Condominium', function () {
   async function deployFixture() {
     const [manager, resident, counselor] = await hre.ethers.getSigners()
@@ -217,10 +231,184 @@ describe('Condominium', function () {
 
     await condominium.addTopic('topic 1', 'description 1')
 
-    // TODO: change topic status
+    await condominium.openVoting('topic 1')
 
     await expect(condominium.removeTopic('topic 1')).to.be.revertedWith(
+      'Only IDLE topics can be removed'
+    )
+  })
+
+  it('Should open topic to voting', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await condominium.addTopic('topic 1', 'description 1')
+
+    await condominium.openVoting('topic 1')
+
+    const topic = await condominium.getTopic('topic 1')
+
+    const newStatus = topic.status
+
+    expect(newStatus).to.equal(Status.VOTING)
+  })
+
+  it('Should NOT open topic to voting (permission)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+
+    await condominium.addTopic('topic 1', 'description 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(residentInstance.openVoting('topic 1')).to.be.revertedWith(
+      'Only the manager can do this'
+    )
+  })
+
+  it('Should NOT open topic to voting (status)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await condominium.addTopic('topic 1', 'description 1')
+
+    await condominium.openVoting('topic 1')
+
+    await expect(condominium.openVoting('topic 1')).to.be.revertedWith(
+      'Only IDLE topics can be open to voting'
+    )
+  })
+
+  it('Should vote in a topic', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addTopic('topic 1', 'description 1')
+    await condominium.openVoting('topic 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await residentInstance.vote('topic 1', Options.YES)
+
+    expect(await condominium.numberOfVotes('topic 1')).to.equal(1)
+  })
+
+  it('Should NOT vote in a topic (permission)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addTopic('topic 1', 'description 1')
+    await condominium.openVoting('topic 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(
+      residentInstance.vote('topic 1', Options.YES)
+    ).to.be.revertedWith('Only the manager or the residents can do this')
+  })
+
+  it('Should NOT vote in a topic (empty)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addTopic('topic 1', 'description 1')
+    await condominium.openVoting('topic 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(
+      residentInstance.vote('topic 1', Options.EMPTY)
+    ).to.be.revertedWith('The option cannot be EMPTY')
+  })
+
+  it('Should NOT vote in a topic (topic)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(
+      residentInstance.vote('topic 1', Options.YES)
+    ).to.be.revertedWith('Topic does not exists')
+  })
+
+  it('Should NOT vote in a topic (status)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addTopic('topic 1', 'description 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(
+      residentInstance.vote('topic 1', Options.YES)
+    ).to.be.revertedWith('Only VOTING topics can be voted')
+  })
+
+  it('Should NOT vote twice in a topic', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addTopic('topic 1', 'description 1')
+    await condominium.openVoting('topic 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await residentInstance.vote('topic 1', Options.YES)
+
+    await expect(
+      residentInstance.vote('topic 1', Options.YES)
+    ).to.be.revertedWith('A residence should vote only once')
+  })
+
+  it('Should close voting', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addTopic('topic 1', 'description 1')
+    await condominium.openVoting('topic 1')
+
+    await condominium.vote('topic 1', Options.YES)
+    const residentInstance = condominium.connect(resident)
+
+    await residentInstance.vote('topic 1', Options.YES)
+
+    await condominium.closeVoting('topic 1')
+
+    const topic = await condominium.getTopic('topic 1')
+
+    expect(topic.status).to.equal(Status.APPROVED)
+  })
+
+  it('Should NOT close voting (permission)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addTopic('topic 1', 'description 1')
+    await condominium.openVoting('topic 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(residentInstance.closeVoting('topic 1')).to.be.revertedWith(
+      'Only the manager can do this'
+    )
+  })
+
+  it('Should NOT close voting (topic not exists)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(condominium.closeVoting('topic 1')).to.be.revertedWith(
       'Topic does not exists'
+    )
+  })
+
+  it('Should NOT close voting (status)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addTopic('topic 1', 'description 1')
+
+    await expect(condominium.closeVoting('topic 1')).to.be.revertedWith(
+      'Only VOTING topics can be closed'
     )
   })
 })
