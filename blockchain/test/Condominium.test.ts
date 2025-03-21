@@ -1,6 +1,5 @@
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { expect } from 'chai'
-import { ZeroAddress } from 'ethers'
 import hre from 'hardhat'
 
 enum Status {
@@ -132,31 +131,31 @@ describe('Condominium', function () {
     expect(await condominium.counselors(counselor.address)).to.equal(false)
   })
 
-  it('Should set manager', async function () {
-    const { condominium, counselor } = await loadFixture(deployFixture)
+  // it('Should set manager', async function () {
+  //   const { condominium, counselor } = await loadFixture(deployFixture)
 
-    await condominium.setManager(counselor.address)
+  //   await condominium.setManager(counselor.address)
 
-    expect(await condominium.manager()).to.equal(counselor.address)
-  })
+  //   expect(await condominium.manager()).to.equal(counselor.address)
+  // })
 
-  it('Should NOT set manager (manager)', async function () {
-    const { condominium, resident } = await loadFixture(deployFixture)
+  // it('Should NOT set manager (manager)', async function () {
+  //   const { condominium, resident } = await loadFixture(deployFixture)
 
-    const residentInstance = condominium.connect(resident)
+  //   const residentInstance = condominium.connect(resident)
 
-    await expect(
-      residentInstance.setManager(resident.address)
-    ).to.be.revertedWith('Only the manager can do this')
-  })
+  //   await expect(
+  //     residentInstance.setManager(resident.address)
+  //   ).to.be.revertedWith('Only the manager can do this')
+  // })
 
-  it('Should NOT set manager (address)', async function () {
-    const { condominium } = await loadFixture(deployFixture)
+  // it('Should NOT set manager (address)', async function () {
+  //   const { condominium } = await loadFixture(deployFixture)
 
-    await expect(condominium.setManager(ZeroAddress)).to.be.revertedWith(
-      'The address must be valid'
-    )
-  })
+  //   await expect(condominium.setManager(ZeroAddress)).to.be.revertedWith(
+  //     'The address must be valid'
+  //   )
+  // })
 
   it('Should add topic (manager)', async function () {
     const { condominium } = await loadFixture(deployFixture)

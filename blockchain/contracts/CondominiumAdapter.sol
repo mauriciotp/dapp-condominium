@@ -11,6 +11,10 @@ contract CondominiumAdapter {
         owner = msg.sender;
     }
 
+    function getImplementationAddress() external view returns (address) {
+        return address(implementation);
+    }
+
     function upgrade(address newImplementation) external {
         require(msg.sender == owner, "You do not have permission");
         implementation = ICondominium(newImplementation);
@@ -26,10 +30,6 @@ contract CondominiumAdapter {
 
     function setCounselor(address resident, bool isEntering) external {
         return implementation.setCounselor(resident, isEntering);
-    }
-
-    function setManager(address newManager) external {
-        return implementation.setManager(newManager);
     }
 
     function addTopic(string memory title, string memory description) external {

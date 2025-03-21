@@ -16,25 +16,23 @@ contract Condominium is ICondominium {
     constructor() {
         manager = msg.sender;
 
-        unchecked {
-            for (uint16 i = 1; i <= 2; i++) {
-                for (uint16 j = 1; j <= 5; j++) {
-                    for (uint16 k = 1; k <= 5; k++) {
-                        residences[(i * 1000) + (j * 100) + k] = true;
-                    }
+        for (uint16 i = 1; i <= 2; i++) {
+            for (uint16 j = 1; j <= 5; j++) {
+                for (uint16 k = 1; k <= 5; k++) {
+                    residences[(i * 1000) + (j * 100) + k] = true;
                 }
             }
         }
     }
 
     modifier onlyManager() {
-        require(msg.sender == manager, "Only the manager can do this");
+        require(tx.origin == manager, "Only the manager can do this");
         _;
     }
 
     modifier onlyCouncil() {
         require(
-            msg.sender == manager || counselors[msg.sender],
+            tx.origin == manager || counselors[tx.origin],
             "Only the manager or the council can do this"
         );
         _;
@@ -42,7 +40,7 @@ contract Condominium is ICondominium {
 
     modifier onlyResidents() {
         require(
-            msg.sender == manager || isResident(msg.sender),
+            tx.origin == manager || isResident(tx.origin),
             "Only the manager or the residents can do this"
         );
         _;
@@ -81,11 +79,6 @@ contract Condominium is ICondominium {
         } else {
             delete counselors[resident];
         }
-    }
-
-    function setManager(address newManager) external onlyManager {
-        require(newManager != address(0), "The address must be valid");
-        manager = newManager;
     }
 
     function getTopic(
@@ -167,7 +160,7 @@ contract Condominium is ICondominium {
 
         bytes32 topicId = keccak256(bytes(title));
 
-        uint16 residence = residents[msg.sender];
+        uint16 residence = residents[tx.origin];
 
         Lib.Vote[] memory votes = votings[topicId];
 
@@ -178,7 +171,7 @@ contract Condominium is ICondominium {
         }
 
         Lib.Vote memory newVote = Lib.Vote({
-            resident: msg.sender,
+            resident: tx.origin,
             residence: residence,
             option: option,
             timestamp: block.timestamp

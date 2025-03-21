@@ -11,9 +11,6 @@ interface ICondominium {
     function setCounselor(address counselor, bool isEntering) external;
 
     //TODO: mudar
-    function setManager(address newManager) external;
-
-    //TODO: mudar
     function addTopic(string memory title, string memory description) external;
 
     //TODO: editar tópico
@@ -26,6 +23,7 @@ interface ICondominium {
 
     function vote(string memory title, Lib.Options option) external;
 
+    //TODO: mudar
     function closeVoting(string memory title) external;
 
     //TODO: pay quota
