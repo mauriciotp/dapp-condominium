@@ -16,10 +16,20 @@ library CondominiumLib {
         ABSTENTION
     }
 
+    enum Category {
+        DECISION,
+        SPENT,
+        CHANGE_QUOTA,
+        CHANGE_MANAGER
+    }
+
     struct Topic {
         string title;
         string description;
         Status status;
+        Category category;
+        uint256 amount;
+        address responsible;
         uint256 createdDate;
         uint256 startDate;
         uint256 endDate;
