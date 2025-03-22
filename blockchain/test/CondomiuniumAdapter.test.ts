@@ -1,6 +1,8 @@
+import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { expect } from 'chai'
 import hre from 'hardhat'
+import { CondominiumAdapter } from '../typechain-types'
 
 enum Status {
   IDLE = 0,
@@ -16,15 +18,49 @@ enum Options {
   ABSTENTION = 3,
 }
 
+enum Category {
+  DECISION = 0,
+  SPENT = 1,
+  CHANGE_QUOTA = 2,
+  CHANGE_MANAGER = 3,
+}
+
+async function addResidents(
+  adapter: CondominiumAdapter,
+  count: number,
+  accounts: SignerWithAddress[]
+) {
+  for (let i = 1; i <= count; i++) {
+    const residenceId =
+      1000 * Math.ceil(i / 25) +
+      100 * Math.ceil(i / 5) +
+      (i - 5 * Math.floor((i - 1) / 5))
+
+    await adapter.addResident(accounts[i].address, residenceId)
+  }
+}
+
+async function addVotes(
+  adapter: CondominiumAdapter,
+  count: number,
+  accounts: SignerWithAddress[]
+) {
+  for (let i = 1; i <= count; i++) {
+    const instance = adapter.connect(accounts[i])
+    await instance.vote('topic 1', Options.YES)
+  }
+}
+
 describe('CondominiumAdapter', function () {
   async function deployAdapterFixture() {
-    const [manager, resident, counselor] = await hre.ethers.getSigners()
+    const [manager, resident, counselor, ...accounts] =
+      await hre.ethers.getSigners()
 
     const CondominiumAdapter =
       await hre.ethers.getContractFactory('CondominiumAdapter')
     const condominiumAdapter = await CondominiumAdapter.deploy()
 
-    return { condominiumAdapter, manager, resident, counselor }
+    return { condominiumAdapter, manager, resident, counselor, accounts }
   }
 
   async function deployImplementationFixture() {
@@ -106,38 +142,59 @@ describe('CondominiumAdapter', function () {
   })
 
   it('Should add topic', async function () {
-    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
     const { condominium } = await loadFixture(deployImplementationFixture)
 
     const condominiumAddress = await condominium.getAddress()
     await condominiumAdapter.upgrade(condominiumAddress)
 
-    await condominiumAdapter.addTopic('topic 1', 'description 1')
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
 
     expect(await condominium.topicExists('topic 1')).to.equal(true)
   })
 
   it('Should remove topic', async function () {
-    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
     const { condominium } = await loadFixture(deployImplementationFixture)
 
     const condominiumAddress = await condominium.getAddress()
     await condominiumAdapter.upgrade(condominiumAddress)
 
-    await condominiumAdapter.addTopic('topic 1', 'description 1')
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
     await condominiumAdapter.removeTopic('topic 1')
 
     expect(await condominium.topicExists('topic 1')).to.equal(false)
   })
 
   it('Should open voting', async function () {
-    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
     const { condominium } = await loadFixture(deployImplementationFixture)
 
     const condominiumAddress = await condominium.getAddress()
     await condominiumAdapter.upgrade(condominiumAddress)
 
-    await condominiumAdapter.addTopic('topic 1', 'description 1')
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
     await condominiumAdapter.openVoting('topic 1')
     const topic = await condominium.getTopic('topic 1')
 
@@ -145,7 +202,7 @@ describe('CondominiumAdapter', function () {
   })
 
   it('Should vote', async function () {
-    const { condominiumAdapter, resident } =
+    const { condominiumAdapter, resident, manager } =
       await loadFixture(deployAdapterFixture)
     const { condominium } = await loadFixture(deployImplementationFixture)
 
@@ -153,7 +210,13 @@ describe('CondominiumAdapter', function () {
     await condominiumAdapter.upgrade(condominiumAddress)
 
     await condominiumAdapter.addResident(resident.address, 2505)
-    await condominiumAdapter.addTopic('topic 1', 'description 1')
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
     await condominiumAdapter.openVoting('topic 1')
 
     const residentInstance = condominiumAdapter.connect(resident)
@@ -164,20 +227,26 @@ describe('CondominiumAdapter', function () {
   })
 
   it('Should close voting', async function () {
-    const { condominiumAdapter, resident } =
+    const { condominiumAdapter, manager, accounts } =
       await loadFixture(deployAdapterFixture)
     const { condominium } = await loadFixture(deployImplementationFixture)
 
     const condominiumAddress = await condominium.getAddress()
     await condominiumAdapter.upgrade(condominiumAddress)
 
-    await condominiumAdapter.addResident(resident.address, 2505)
-    await condominiumAdapter.addTopic('topic 1', 'description 1')
+    await addResidents(condominiumAdapter, 5, accounts)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
     await condominiumAdapter.openVoting('topic 1')
 
-    const residentInstance = condominiumAdapter.connect(resident)
+    await addVotes(condominiumAdapter, 5, accounts)
 
-    await residentInstance.vote('topic 1', Options.YES)
     await condominiumAdapter.closeVoting('topic 1')
 
     const topic = await condominium.getTopic('topic 1')
