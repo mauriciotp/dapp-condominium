@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { expect } from 'chai'
+import { parseEther } from 'ethers'
 import hre from 'hardhat'
 import { Condominium } from '../typechain-types'
 
@@ -36,18 +37,19 @@ async function addResidents(
       100 * Math.ceil(i / 5) +
       (i - 5 * Math.floor((i - 1) / 5))
 
-    await contract.addResident(accounts[i].address, residenceId)
+    await contract.addResident(accounts[i - 1].address, residenceId)
   }
 }
 
 async function addVotes(
   contract: Condominium,
   count: number,
-  accounts: SignerWithAddress[]
+  accounts: SignerWithAddress[],
+  shouldApprove = true
 ) {
   for (let i = 1; i <= count; i++) {
-    const instance = contract.connect(accounts[i])
-    await instance.vote('topic 1', Options.YES)
+    const instance = contract.connect(accounts[i - 1])
+    await instance.vote('topic 1', shouldApprove ? Options.YES : Options.NO)
   }
 }
 
@@ -127,14 +129,32 @@ describe('Condominium', function () {
     ).to.be.revertedWith('A counselor cannot be removed')
   })
 
-  it('Should set counselor', async function () {
+  it('Should set counselor (true)', async function () {
+    const { condominium, counselor, resident } =
+      await loadFixture(deployFixture)
+
+    await condominium.addResident(counselor.address, 2505)
+
+    await condominium.setCounselor(counselor.address, true)
+
+    const counselorInstance = condominium.connect(counselor)
+
+    await counselorInstance.addResident(resident, 2504)
+
+    expect(await condominium.counselors(counselor.address)).to.equal(true)
+    expect(await condominium.isResident(resident.address)).to.equal(true)
+  })
+
+  it('Should set counselor (false)', async function () {
     const { condominium, counselor } = await loadFixture(deployFixture)
 
     await condominium.addResident(counselor.address, 2505)
 
     await condominium.setCounselor(counselor.address, true)
 
-    expect(await condominium.counselors(counselor.address)).to.equal(true)
+    await condominium.setCounselor(counselor.address, false)
+
+    expect(await condominium.counselors(counselor.address)).to.equal(false)
   })
 
   it('Should NOT set counselor (manager)', async function () {
@@ -167,31 +187,46 @@ describe('Condominium', function () {
     expect(await condominium.counselors(counselor.address)).to.equal(false)
   })
 
-  // it('Should set manager', async function () {
-  //   const { condominium, counselor } = await loadFixture(deployFixture)
+  it('Should change manager', async function () {
+    const { condominium, accounts } = await loadFixture(deployFixture)
 
-  //   await condominium.setManager(counselor.address)
+    await addResidents(condominium, 15, accounts)
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.CHANGE_MANAGER,
+      0,
+      accounts[1]
+    )
+    await condominium.openVoting('topic 1')
 
-  //   expect(await condominium.manager()).to.equal(counselor.address)
-  // })
+    await addVotes(condominium, 15, accounts)
 
-  // it('Should NOT set manager (manager)', async function () {
-  //   const { condominium, resident } = await loadFixture(deployFixture)
+    await condominium.closeVoting('topic 1')
 
-  //   const residentInstance = condominium.connect(resident)
+    expect(await condominium.manager()).to.equal(accounts[1].address)
+  })
 
-  //   await expect(
-  //     residentInstance.setManager(resident.address)
-  //   ).to.be.revertedWith('Only the manager can do this')
-  // })
+  it('Should change quota', async function () {
+    const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
-  // it('Should NOT set manager (address)', async function () {
-  //   const { condominium } = await loadFixture(deployFixture)
+    await addResidents(condominium, 17, accounts)
+    const value = parseEther('0.002')
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.CHANGE_QUOTA,
+      value,
+      manager.address
+    )
+    await condominium.openVoting('topic 1')
 
-  //   await expect(condominium.setManager(ZeroAddress)).to.be.revertedWith(
-  //     'The address must be valid'
-  //   )
-  // })
+    await addVotes(condominium, 17, accounts)
+
+    await condominium.closeVoting('topic 1')
+
+    expect(await condominium.monthlyQuota()).to.equal(value)
+  })
 
   it('Should add topic (manager)', async function () {
     const { condominium, manager } = await loadFixture(deployFixture)
@@ -205,6 +240,20 @@ describe('Condominium', function () {
     )
 
     expect(await condominium.topicExists('topic 1')).to.equal(true)
+  })
+
+  it('Should NOT add topic (amount)', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await expect(
+      condominium.addTopic(
+        'topic 1',
+        'description 1',
+        Category.DECISION,
+        10,
+        manager.address
+      )
+    ).to.be.revertedWith('Wrong category')
   })
 
   it('Should add topic (resident)', async function () {
@@ -373,6 +422,14 @@ describe('Condominium', function () {
     )
   })
 
+  it('Should NOT open topic to voting (exists)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(condominium.openVoting('topic 1')).to.be.revertedWith(
+      'Topic does not exists'
+    )
+  })
+
   it('Should vote in a topic', async function () {
     const { condominium, resident, manager } = await loadFixture(deployFixture)
 
@@ -389,7 +446,7 @@ describe('Condominium', function () {
 
     const residentInstance = condominium.connect(resident)
 
-    await residentInstance.vote('topic 1', Options.YES)
+    await residentInstance.vote('topic 1', Options.ABSTENTION)
 
     expect(await condominium.numberOfVotes('topic 1')).to.equal(1)
   })
@@ -489,7 +546,7 @@ describe('Condominium', function () {
   it('Should close voting', async function () {
     const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
-    await addResidents(condominium, 5, accounts)
+    await addResidents(condominium, 6, accounts)
     await condominium.addTopic(
       'topic 1',
       'description 1',
@@ -499,13 +556,15 @@ describe('Condominium', function () {
     )
     await condominium.openVoting('topic 1')
 
-    await addVotes(condominium, 5, accounts)
+    await addVotes(condominium, 5, accounts, false)
+    const residentInstance = condominium.connect(accounts[5])
+    await residentInstance.vote('topic 1', Options.ABSTENTION)
 
     await condominium.closeVoting('topic 1')
 
     const topic = await condominium.getTopic('topic 1')
 
-    expect(topic.status).to.equal(Status.APPROVED)
+    expect(topic.status).to.equal(Status.DENIED)
   })
 
   it('Should NOT close voting (permission)', async function () {
@@ -550,6 +609,23 @@ describe('Condominium', function () {
 
     await expect(condominium.closeVoting('topic 1')).to.be.revertedWith(
       'Only VOTING topics can be closed'
+    )
+  })
+
+  it('Should NOT close voting (minimum votes)', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+    await condominium.openVoting('topic 1')
+
+    await expect(condominium.closeVoting('topic 1')).to.be.revertedWith(
+      'You cannot finish a voting without the minimum votes'
     )
   })
 })
