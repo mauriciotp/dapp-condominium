@@ -219,7 +219,7 @@ contract Condominium is ICondominium {
             topics[topicId].description = description;
         }
 
-        if (amount >= 0) {
+        if (amount > 0) {
             topics[topicId].amount = amount;
         }
 

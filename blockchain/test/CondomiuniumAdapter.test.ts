@@ -111,6 +111,15 @@ describe('CondominiumAdapter', function () {
     expect(await condominium.isResident(resident.address)).to.equal(true)
   })
 
+  it('Should NOT add resident (upgrade)', async function () {
+    const { condominiumAdapter, resident } =
+      await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.addResident(resident, 2505)
+    ).to.be.revertedWith('You must upgrade first')
+  })
+
   it('Should remove resident', async function () {
     const { condominiumAdapter, resident } =
       await loadFixture(deployAdapterFixture)
@@ -126,6 +135,15 @@ describe('CondominiumAdapter', function () {
     expect(await condominium.isResident(resident.address)).to.equal(false)
   })
 
+  it('Should NOT remove resident (upgrade)', async function () {
+    const { condominiumAdapter, resident } =
+      await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.removeResident(resident.address)
+    ).to.be.revertedWith('You must upgrade first')
+  })
+
   it('Should set counselor', async function () {
     const { condominiumAdapter, resident } =
       await loadFixture(deployAdapterFixture)
@@ -139,6 +157,15 @@ describe('CondominiumAdapter', function () {
     await condominiumAdapter.setCounselor(resident.address, true)
 
     expect(await condominium.counselors(resident.address)).to.equal(true)
+  })
+
+  it('Should NOT set counselor (upgrade)', async function () {
+    const { condominiumAdapter, resident } =
+      await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.setCounselor(resident.address, true)
+    ).to.be.revertedWith('You must upgrade first')
   })
 
   it('Should add topic', async function () {
@@ -158,6 +185,63 @@ describe('CondominiumAdapter', function () {
     )
 
     expect(await condominium.topicExists('topic 1')).to.equal(true)
+  })
+
+  it('Should NOT add topic (upgrade)', async function () {
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.addTopic(
+        'topic 1',
+        'description 1',
+        Category.SPENT,
+        1,
+        manager.address
+      )
+    ).to.be.revertedWith('You must upgrade first')
+  })
+
+  it('Should edit topic', async function () {
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.SPENT,
+      1,
+      manager.address
+    )
+
+    await condominiumAdapter.editTopic(
+      'topic 1',
+      'new description',
+      2,
+      manager.address
+    )
+
+    const topic = await condominium.getTopic('topic 1')
+
+    expect(topic.description).to.equal('new description')
+  })
+
+  it('Should NOT edit topic (upgrade)', async function () {
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.editTopic(
+        'topic 1',
+        'new description',
+        1,
+        manager.address
+      )
+    ).to.be.revertedWith('You must upgrade first')
   })
 
   it('Should remove topic', async function () {
@@ -180,6 +264,14 @@ describe('CondominiumAdapter', function () {
     expect(await condominium.topicExists('topic 1')).to.equal(false)
   })
 
+  it('Should NOT remove topic (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.removeTopic('topic 1')).to.be.revertedWith(
+      'You must upgrade first'
+    )
+  })
+
   it('Should open voting', async function () {
     const { condominiumAdapter, manager } =
       await loadFixture(deployAdapterFixture)
@@ -199,6 +291,14 @@ describe('CondominiumAdapter', function () {
     const topic = await condominium.getTopic('topic 1')
 
     expect(topic.status).to.equal(Status.VOTING)
+  })
+
+  it('Should NOT open voting (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.openVoting('topic 1')).to.be.revertedWith(
+      'You must upgrade first'
+    )
   })
 
   it('Should vote', async function () {
@@ -224,6 +324,14 @@ describe('CondominiumAdapter', function () {
     await residentInstance.vote('topic 1', Options.YES)
 
     expect(await condominium.numberOfVotes('topic 1')).to.equal(1)
+  })
+
+  it('Should NOT vote (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.vote('topic 1', Options.YES)
+    ).to.be.revertedWith('You must upgrade first')
   })
 
   it('Should close voting', async function () {
@@ -252,5 +360,13 @@ describe('CondominiumAdapter', function () {
     const topic = await condominium.getTopic('topic 1')
 
     expect(topic.status).to.equal(Status.APPROVED)
+  })
+
+  it('Should NOT close voting (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.closeVoting('topic 1')).to.be.revertedWith(
+      'You must upgrade first'
+    )
   })
 })

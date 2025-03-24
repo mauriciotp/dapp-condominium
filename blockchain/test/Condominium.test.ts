@@ -1,7 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { expect } from 'chai'
-import { parseEther } from 'ethers'
+import { ZeroAddress, parseEther } from 'ethers'
 import hre from 'hardhat'
 import { Condominium } from '../typechain-types'
 
@@ -76,6 +76,14 @@ describe('Condominium', function () {
     await condominium.addResident(resident.address, 2505)
 
     expect(await condominium.isResident(resident.address)).to.equal(true)
+  })
+
+  it('Should add resident (address)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(condominium.addResident(ZeroAddress, 2505)).to.be.revertedWith(
+      'Invalid address'
+    )
   })
 
   it('Should NOT add resident (council)', async function () {
@@ -157,7 +165,15 @@ describe('Condominium', function () {
     expect(await condominium.counselors(counselor.address)).to.equal(false)
   })
 
-  it('Should NOT set counselor (manager)', async function () {
+  it('Should NOT set counselor (address)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(
+      condominium.setCounselor(ZeroAddress, true)
+    ).to.be.revertedWith('Invalid address')
+  })
+
+  it('Should NOT set counselor (permission)', async function () {
     const { condominium, resident } = await loadFixture(deployFixture)
 
     const residentInstance = condominium.connect(resident)
@@ -310,6 +326,96 @@ describe('Condominium', function () {
         manager.address
       )
     ).to.be.revertedWith('Topic already exists')
+  })
+
+  it('Should edit topic', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.SPENT,
+      0,
+      manager.address
+    )
+
+    await condominium.editTopic(
+      'topic 1',
+      'new description',
+      1,
+      manager.address
+    )
+
+    const topic = await condominium.getTopic('topic 1')
+
+    expect(topic.description).to.equal('new description')
+  })
+
+  it('Should edit topic (nothing)', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.SPENT,
+      1,
+      manager.address
+    )
+
+    await condominium.editTopic('topic 1', '', 0, ZeroAddress)
+
+    const topic = await condominium.getTopic('topic 1')
+
+    expect(topic.description).to.equal('description 1')
+  })
+
+  it('Should NOT edit topic (permission)', async function () {
+    const { condominium, manager, resident } = await loadFixture(deployFixture)
+
+    const residentInstance = condominium.connect(resident)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.SPENT,
+      0,
+      manager.address
+    )
+
+    await expect(
+      residentInstance.editTopic(
+        'topic 1',
+        'new description',
+        1,
+        manager.address
+      )
+    ).to.be.revertedWith('Only the manager can do this')
+  })
+
+  it('Should NOT edit topic (topic not exists)', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await expect(
+      condominium.editTopic('topic 1', 'new description', 1, manager.address)
+    ).to.be.revertedWith('This topic does not exists')
+  })
+
+  it('Should NOT edit topic (status))', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.SPENT,
+      0,
+      manager.address
+    )
+
+    await condominium.openVoting('topic 1')
+
+    await expect(
+      condominium.editTopic('topic 1', 'new description', 1, manager.address)
+    ).to.be.revertedWith('Only IDLE topics can be edited')
   })
 
   it('Should remove topic', async function () {
