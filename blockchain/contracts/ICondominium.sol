@@ -10,7 +10,6 @@ interface ICondominium {
 
     function setCounselor(address counselor, bool isEntering) external;
 
-    //TODO: mudar
     function addTopic(
         string memory title,
         string memory description,
@@ -19,7 +18,12 @@ interface ICondominium {
         address responsible
     ) external;
 
-    //TODO: editar tópico
+    function editTopic(
+        string memory topicToEdit,
+        string memory description,
+        uint256 amount,
+        address responsible
+    ) external;
 
     function removeTopic(string memory title) external;
 

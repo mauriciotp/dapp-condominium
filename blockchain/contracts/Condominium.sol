@@ -48,6 +48,11 @@ contract Condominium is ICondominium {
         _;
     }
 
+    modifier validAddress(address addr) {
+        require(addr != address(0), "Invalid address");
+        _;
+    }
+
     function residenceExists(uint16 residence) public view returns (bool) {
         return residences[residence];
     }
@@ -59,7 +64,7 @@ contract Condominium is ICondominium {
     function addResident(
         address resident,
         uint16 residenceId
-    ) external onlyCouncil {
+    ) external onlyCouncil validAddress(resident) {
         require(residenceExists(residenceId), "Residence does not exist");
         residents[resident] = residenceId;
     }
@@ -72,7 +77,7 @@ contract Condominium is ICondominium {
     function setCounselor(
         address resident,
         bool isEntering
-    ) external onlyManager {
+    ) external onlyManager validAddress(resident) {
         if (isEntering) {
             require(isResident(resident), "The counselor must be a resident");
             counselors[resident] = true;
@@ -192,6 +197,35 @@ contract Condominium is ICondominium {
         });
 
         votings[topicId].push(newVote);
+    }
+
+    function editTopic(
+        string memory topicToEdit,
+        string memory description,
+        uint256 amount,
+        address responsible
+    ) external onlyManager {
+        require(topicExists(topicToEdit), "This topic does not exists");
+
+        Lib.Topic memory topic = getTopic(topicToEdit);
+        require(
+            topic.status == Lib.Status.IDLE,
+            "Only IDLE topics can be edited"
+        );
+
+        bytes32 topicId = keccak256(bytes(topicToEdit));
+
+        if (bytes(description).length > 0) {
+            topics[topicId].description = description;
+        }
+
+        if (amount >= 0) {
+            topics[topicId].amount = amount;
+        }
+
+        if (responsible != address(0)) {
+            topics[topicId].responsible = responsible;
+        }
     }
 
     function closeVoting(string memory title) external onlyManager {

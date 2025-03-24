@@ -11,6 +11,14 @@ contract CondominiumAdapter {
         owner = msg.sender;
     }
 
+    modifier upgraded() {
+        require(
+            address(implementation) != address(0),
+            "You must upgrade first"
+        );
+        _;
+    }
+
     function getImplementationAddress() external view returns (address) {
         return address(implementation);
     }
@@ -20,15 +28,18 @@ contract CondominiumAdapter {
         implementation = ICondominium(newImplementation);
     }
 
-    function addResident(address resident, uint16 residenceId) external {
+    function addResident(
+        address resident,
+        uint16 residenceId
+    ) external upgraded {
         return implementation.addResident(resident, residenceId);
     }
 
-    function removeResident(address resident) external {
+    function removeResident(address resident) external upgraded {
         return implementation.removeResident(resident);
     }
 
-    function setCounselor(address resident, bool isEntering) external {
+    function setCounselor(address resident, bool isEntering) external upgraded {
         return implementation.setCounselor(resident, isEntering);
     }
 
@@ -38,7 +49,7 @@ contract CondominiumAdapter {
         Lib.Category category,
         uint256 amount,
         address responsible
-    ) external {
+    ) external upgraded {
         return
             implementation.addTopic(
                 title,
@@ -49,19 +60,34 @@ contract CondominiumAdapter {
             );
     }
 
-    function removeTopic(string memory title) external {
+    function editTopic(
+        string memory topicToEdit,
+        string memory description,
+        uint256 amount,
+        address responsible
+    ) external upgraded {
+        return
+            implementation.editTopic(
+                topicToEdit,
+                description,
+                amount,
+                responsible
+            );
+    }
+
+    function removeTopic(string memory title) external upgraded {
         return implementation.removeTopic(title);
     }
 
-    function openVoting(string memory title) external {
+    function openVoting(string memory title) external upgraded {
         return implementation.openVoting(title);
     }
 
-    function vote(string memory title, Lib.Options option) external {
+    function vote(string memory title, Lib.Options option) external upgraded {
         return implementation.vote(title, option);
     }
 
-    function closeVoting(string memory title) external {
+    function closeVoting(string memory title) external upgraded {
         return implementation.closeVoting(title);
     }
 }
