@@ -1,6 +1,7 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { expect } from 'chai'
+import { parseEther } from 'ethers'
 import hre from 'hardhat'
 import { CondominiumAdapter } from '../typechain-types'
 
@@ -36,7 +37,10 @@ async function addResidents(
       100 * Math.ceil(i / 5) +
       (i - 5 * Math.floor((i - 1) / 5))
 
-    await adapter.addResident(accounts[i].address, residenceId)
+    await adapter.addResident(accounts[i - 1].address, residenceId)
+
+    const instance = adapter.connect(accounts[i - 1])
+    await instance.payQuota(residenceId, { value: parseEther('0.001') })
   }
 }
 
@@ -46,7 +50,7 @@ async function addVotes(
   accounts: SignerWithAddress[]
 ) {
   for (let i = 1; i <= count; i++) {
-    const instance = adapter.connect(accounts[i])
+    const instance = adapter.connect(accounts[i - 1])
     await instance.vote('topic 1', Options.YES)
   }
 }
@@ -302,14 +306,14 @@ describe('CondominiumAdapter', function () {
   })
 
   it('Should vote', async function () {
-    const { condominiumAdapter, resident, manager } =
+    const { condominiumAdapter, manager, accounts } =
       await loadFixture(deployAdapterFixture)
     const { condominium } = await loadFixture(deployImplementationFixture)
 
     const condominiumAddress = await condominium.getAddress()
     await condominiumAdapter.upgrade(condominiumAddress)
 
-    await condominiumAdapter.addResident(resident.address, 2505)
+    await addResidents(condominiumAdapter, 1, accounts)
     await condominiumAdapter.addTopic(
       'topic 1',
       'description 1',
@@ -319,7 +323,7 @@ describe('CondominiumAdapter', function () {
     )
     await condominiumAdapter.openVoting('topic 1')
 
-    const residentInstance = condominiumAdapter.connect(resident)
+    const residentInstance = condominiumAdapter.connect(accounts[0])
 
     await residentInstance.vote('topic 1', Options.YES)
 

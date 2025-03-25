@@ -38,6 +38,9 @@ async function addResidents(
       (i - 5 * Math.floor((i - 1) / 5))
 
     await contract.addResident(accounts[i - 1].address, residenceId)
+
+    const instance = contract.connect(accounts[i - 1])
+    await instance.payQuota(residenceId, { value: parseEther('0.001') })
   }
 }
 
@@ -273,11 +276,11 @@ describe('Condominium', function () {
   })
 
   it('Should add topic (resident)', async function () {
-    const { condominium, resident, manager } = await loadFixture(deployFixture)
+    const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
-    await condominium.addResident(resident, 2505)
+    await addResidents(condominium, 1, accounts)
 
-    const residentInstance = condominium.connect(resident)
+    const residentInstance = condominium.connect(accounts[0])
 
     await residentInstance.addTopic(
       'topic 1',
@@ -537,9 +540,9 @@ describe('Condominium', function () {
   })
 
   it('Should vote in a topic', async function () {
-    const { condominium, resident, manager } = await loadFixture(deployFixture)
+    const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
-    await condominium.addResident(resident.address, 2505)
+    await addResidents(condominium, 1, accounts)
     await condominium.addTopic(
       'topic 1',
       'description 1',
@@ -550,7 +553,7 @@ describe('Condominium', function () {
 
     await condominium.openVoting('topic 1')
 
-    const residentInstance = condominium.connect(resident)
+    const residentInstance = condominium.connect(accounts[0])
 
     await residentInstance.vote('topic 1', Options.ABSTENTION)
 
@@ -577,9 +580,9 @@ describe('Condominium', function () {
   })
 
   it('Should NOT vote in a topic (empty)', async function () {
-    const { condominium, resident, manager } = await loadFixture(deployFixture)
+    const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
-    await condominium.addResident(resident.address, 2505)
+    await addResidents(condominium, 1, accounts)
     await condominium.addTopic(
       'topic 1',
       'description 1',
@@ -589,19 +592,19 @@ describe('Condominium', function () {
     )
     await condominium.openVoting('topic 1')
 
-    const residentInstance = condominium.connect(resident)
+    const residentInstance = condominium.connect(accounts[0])
 
     await expect(
       residentInstance.vote('topic 1', Options.EMPTY)
     ).to.be.revertedWith('The option cannot be EMPTY')
   })
 
-  it('Should NOT vote in a topic (topic)', async function () {
-    const { condominium, resident } = await loadFixture(deployFixture)
+  it('Should NOT vote in a topic (topic not exists)', async function () {
+    const { condominium, accounts } = await loadFixture(deployFixture)
 
-    await condominium.addResident(resident.address, 2505)
+    await addResidents(condominium, 1, accounts)
 
-    const residentInstance = condominium.connect(resident)
+    const residentInstance = condominium.connect(accounts[0])
 
     await expect(
       residentInstance.vote('topic 1', Options.YES)
@@ -609,9 +612,9 @@ describe('Condominium', function () {
   })
 
   it('Should NOT vote in a topic (status)', async function () {
-    const { condominium, resident, manager } = await loadFixture(deployFixture)
+    const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
-    await condominium.addResident(resident.address, 2505)
+    await addResidents(condominium, 1, accounts)
     await condominium.addTopic(
       'topic 1',
       'description 1',
@@ -620,7 +623,7 @@ describe('Condominium', function () {
       manager.address
     )
 
-    const residentInstance = condominium.connect(resident)
+    const residentInstance = condominium.connect(accounts[0])
 
     await expect(
       residentInstance.vote('topic 1', Options.YES)
@@ -628,9 +631,9 @@ describe('Condominium', function () {
   })
 
   it('Should NOT vote twice in a topic', async function () {
-    const { condominium, resident, manager } = await loadFixture(deployFixture)
+    const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
-    await condominium.addResident(resident.address, 2505)
+    await addResidents(condominium, 1, accounts)
     await condominium.addTopic(
       'topic 1',
       'description 1',
@@ -640,7 +643,7 @@ describe('Condominium', function () {
     )
     await condominium.openVoting('topic 1')
 
-    const residentInstance = condominium.connect(resident)
+    const residentInstance = condominium.connect(accounts[0])
 
     await residentInstance.vote('topic 1', Options.YES)
 
