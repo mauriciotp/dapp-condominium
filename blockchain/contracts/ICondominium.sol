@@ -27,16 +27,13 @@ interface ICondominium {
 
     function removeTopic(string memory title) external;
 
-    //TODO: set quota
-
     function openVoting(string memory title) external;
 
     function vote(string memory title, Lib.Options option) external;
 
-    //TODO: mudar
     function closeVoting(string memory title) external;
 
-    //TODO: pay quota
+    function payQuota(uint16 residenceId) external payable;
 
     //TODO: transfer
 }

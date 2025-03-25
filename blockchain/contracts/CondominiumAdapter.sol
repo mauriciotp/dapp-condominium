@@ -90,4 +90,8 @@ contract CondominiumAdapter {
     function closeVoting(string memory title) external upgraded {
         return implementation.closeVoting(title);
     }
+
+    function payQuota(uint16 residenceId) external payable upgraded {
+        return implementation.payQuota{value: msg.value}(residenceId);
+    }
 }
