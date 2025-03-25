@@ -373,4 +373,12 @@ describe('CondominiumAdapter', function () {
       'You must upgrade first'
     )
   })
+
+  it('Should NOT pay quota (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.payQuota(2505, { value: parseEther('0.001') })
+    ).to.be.revertedWith('You must upgrade first')
+  })
 })

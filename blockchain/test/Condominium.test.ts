@@ -630,6 +630,26 @@ describe('Condominium', function () {
     ).to.be.revertedWith('Only VOTING topics can be voted')
   })
 
+  it('Should NOT vote in a topic (defaulter)', async function () {
+    const { condominium, manager, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident, 2505)
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+    await condominium.openVoting('topic 1')
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(
+      residentInstance.vote('topic 1', Options.YES)
+    ).to.be.revertedWith('The resident must be defaulter')
+  })
+
   it('Should NOT vote twice in a topic', async function () {
     const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
@@ -736,5 +756,31 @@ describe('Condominium', function () {
     await expect(condominium.closeVoting('topic 1')).to.be.revertedWith(
       'You cannot finish a voting without the minimum votes'
     )
+  })
+
+  it('Should NOT pay quota (residence)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(
+      condominium.payQuota(2506, { value: parseEther('0.001') })
+    ).to.be.revertedWith('The residence does not exists')
+  })
+
+  it('Should NOT pay quota (amount)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(
+      condominium.payQuota(2505, { value: parseEther('0.0001') })
+    ).to.be.revertedWith('Wrong value')
+  })
+
+  it('Should NOT pay quota (duplicated)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await condominium.payQuota(2505, { value: parseEther('0.001') })
+
+    await expect(
+      condominium.payQuota(2505, { value: parseEther('0.001') })
+    ).to.be.revertedWith('You cannot pay twice a month')
   })
 })
