@@ -2,7 +2,7 @@ import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
 import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { expect } from 'chai'
 import { parseEther } from 'ethers'
-import hre from 'hardhat'
+import hre, { ethers } from 'hardhat'
 import { CondominiumAdapter } from '../typechain-types'
 
 enum Status {
@@ -10,6 +10,7 @@ enum Status {
   VOTING = 1,
   APPROVED = 2,
   DENIED = 3,
+  SPENT = 4,
 }
 
 enum Options {
@@ -379,6 +380,55 @@ describe('CondominiumAdapter', function () {
 
     await expect(
       condominiumAdapter.payQuota(2505, { value: parseEther('0.001') })
+    ).to.be.revertedWith('You must upgrade first')
+  })
+
+  it('Should transfer', async function () {
+    const { condominiumAdapter, accounts } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await addResidents(condominiumAdapter, 10, accounts)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.SPENT,
+      100,
+      accounts[0]
+    )
+    await condominiumAdapter.openVoting('topic 1')
+
+    await addVotes(condominiumAdapter, 10, accounts)
+
+    await condominiumAdapter.closeVoting('topic 1')
+
+    const balanceBefore = await ethers.provider.getBalance(condominiumAddress)
+    const balanceWorkerBefore = await ethers.provider.getBalance(
+      accounts[0].address
+    )
+
+    await condominiumAdapter.transfer('topic 1', 100)
+
+    const balanceAfter = await ethers.provider.getBalance(condominiumAddress)
+    const balanceWorkerAfter = await ethers.provider.getBalance(
+      accounts[0].address
+    )
+    const topic = await condominium.getTopic('topic 1')
+
+    expect(balanceAfter).to.equal(balanceBefore - 100n)
+    expect(balanceWorkerAfter).to.equal(balanceWorkerBefore + 100n)
+    expect(topic.status).to.equal(Status.SPENT)
+  })
+
+  it('Should NOT transfer (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.transfer('topic 1', 100)
     ).to.be.revertedWith('You must upgrade first')
   })
 })

@@ -10,6 +10,7 @@ enum Status {
   VOTING = 1,
   APPROVED = 2,
   DENIED = 3,
+  SPENT = 4,
 }
 
 enum Options {
@@ -782,5 +783,57 @@ describe('Condominium', function () {
     await expect(
       condominium.payQuota(2505, { value: parseEther('0.001') })
     ).to.be.revertedWith('You cannot pay twice a month')
+  })
+
+  it('Should NOT transfer (permission)', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(residentInstance.transfer('topic 1', 100)).to.be.revertedWith(
+      'Only the manager can do this'
+    )
+  })
+
+  it('Should NOT transfer (insufficient funds)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(condominium.transfer('topic 1', 100)).to.be.revertedWith(
+      'Insufficient funds'
+    )
+  })
+
+  it('Should NOT transfer (topic)', async function () {
+    const { condominium, accounts } = await loadFixture(deployFixture)
+
+    await addResidents(condominium, 1, accounts)
+
+    await expect(condominium.transfer('topic 1', 100)).to.be.revertedWith(
+      'Only APPROVED SPENT topics can be used for transfers'
+    )
+  })
+
+  it('Should NOT transfer (higher amount)', async function () {
+    const { condominium, accounts } = await loadFixture(deployFixture)
+
+    await addResidents(condominium, 10, accounts)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.SPENT,
+      100,
+      accounts[0]
+    )
+
+    await condominium.openVoting('topic 1')
+
+    await addVotes(condominium, 10, accounts)
+
+    await condominium.closeVoting('topic 1')
+
+    await expect(condominium.transfer('topic 1', 101)).to.be.revertedWith(
+      'The amount must be less or equal the APPROVED topic'
+    )
   })
 })
