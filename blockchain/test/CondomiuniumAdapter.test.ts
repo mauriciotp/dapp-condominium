@@ -10,7 +10,8 @@ enum Status {
   VOTING = 1,
   APPROVED = 2,
   DENIED = 3,
-  SPENT = 4,
+  DELETED = 4,
+  SPENT = 5,
 }
 
 enum Options {
@@ -48,11 +49,12 @@ async function addResidents(
 async function addVotes(
   adapter: CondominiumAdapter,
   count: number,
-  accounts: SignerWithAddress[]
+  accounts: SignerWithAddress[],
+  shouldApprove = true
 ) {
   for (let i = 1; i <= count; i++) {
     const instance = adapter.connect(accounts[i - 1])
-    await instance.vote('topic 1', Options.YES)
+    await instance.vote('topic 1', shouldApprove ? Options.YES : Options.NO)
   }
 }
 
@@ -339,7 +341,7 @@ describe('CondominiumAdapter', function () {
     ).to.be.revertedWith('You must upgrade first')
   })
 
-  it('Should close voting', async function () {
+  it('Should close voting (decision approved)', async function () {
     const { condominiumAdapter, manager, accounts } =
       await loadFixture(deployAdapterFixture)
     const { condominium } = await loadFixture(deployImplementationFixture)
@@ -360,11 +362,93 @@ describe('CondominiumAdapter', function () {
 
     await addVotes(condominiumAdapter, 5, accounts)
 
-    await condominiumAdapter.closeVoting('topic 1')
-
+    await expect(condominiumAdapter.closeVoting('topic 1')).to.emit(
+      condominiumAdapter,
+      'TopicChanged'
+    )
     const topic = await condominium.getTopic('topic 1')
-
     expect(topic.status).to.equal(Status.APPROVED)
+  })
+
+  it('Should close voting (decision denied)', async function () {
+    const { condominiumAdapter, manager, accounts } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await addResidents(condominiumAdapter, 5, accounts)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+    await condominiumAdapter.openVoting('topic 1')
+
+    await addVotes(condominiumAdapter, 5, accounts, false)
+
+    await expect(condominiumAdapter.closeVoting('topic 1')).to.emit(
+      condominiumAdapter,
+      'TopicChanged'
+    )
+    const topic = await condominium.getTopic('topic 1')
+    expect(topic.status).to.equal(Status.DENIED)
+  })
+
+  it('Should close voting (change manager)', async function () {
+    const { condominiumAdapter, accounts } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await addResidents(condominiumAdapter, 15, accounts)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.CHANGE_MANAGER,
+      0,
+      accounts[0].address
+    )
+    await condominiumAdapter.openVoting('topic 1')
+
+    await addVotes(condominiumAdapter, 15, accounts)
+
+    await expect(condominiumAdapter.closeVoting('topic 1'))
+      .to.emit(condominiumAdapter, 'ManagerChanged')
+      .withArgs(accounts[0].address)
+  })
+
+  it('Should close voting (change quota)', async function () {
+    const { condominiumAdapter, manager, accounts } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await addResidents(condominiumAdapter, 17, accounts)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.CHANGE_QUOTA,
+      100,
+      manager.address
+    )
+    await condominiumAdapter.openVoting('topic 1')
+
+    await addVotes(condominiumAdapter, 17, accounts)
+
+    await expect(condominiumAdapter.closeVoting('topic 1'))
+      .to.emit(condominiumAdapter, 'QuotaChanged')
+      .withArgs(100)
   })
 
   it('Should NOT close voting (upgrade)', async function () {
