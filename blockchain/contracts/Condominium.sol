@@ -139,7 +139,9 @@ contract Condominium is ICondominium {
         topics[topicId] = newTopic;
     }
 
-    function removeTopic(string memory title) external onlyManager {
+    function removeTopic(
+        string memory title
+    ) external onlyManager returns (Lib.TopicUpdate memory) {
         require(topicExists(title), "Topic does not exists");
 
         Lib.Topic memory topic = getTopic(title);
@@ -152,9 +154,19 @@ contract Condominium is ICondominium {
         bytes32 topicId = keccak256(bytes(title));
 
         delete topics[topicId];
+
+        return
+            Lib.TopicUpdate({
+                id: topicId,
+                title: topic.title,
+                category: topic.category,
+                status: Lib.Status.DELETED
+            });
     }
 
-    function openVoting(string memory title) external onlyManager {
+    function openVoting(
+        string memory title
+    ) external onlyManager returns (Lib.TopicUpdate memory) {
         require(topicExists(title), "Topic does not exists");
 
         Lib.Topic memory topic = getTopic(title);
@@ -168,6 +180,14 @@ contract Condominium is ICondominium {
 
         topics[topicId].status = Lib.Status.VOTING;
         topics[topicId].startDate = block.timestamp;
+
+        return
+            Lib.TopicUpdate({
+                id: topicId,
+                title: topic.title,
+                category: topic.category,
+                status: Lib.Status.VOTING
+            });
     }
 
     function vote(
@@ -212,7 +232,7 @@ contract Condominium is ICondominium {
         string memory description,
         uint256 amount,
         address responsible
-    ) external onlyManager {
+    ) external onlyManager returns (Lib.TopicUpdate memory) {
         require(topicExists(topicToEdit), "This topic does not exists");
 
         Lib.Topic memory topic = getTopic(topicToEdit);
@@ -234,9 +254,19 @@ contract Condominium is ICondominium {
         if (responsible != address(0)) {
             topics[topicId].responsible = responsible;
         }
+
+        return
+            Lib.TopicUpdate({
+                id: topicId,
+                title: topic.title,
+                category: topic.category,
+                status: topic.status
+            });
     }
 
-    function closeVoting(string memory title) external onlyManager {
+    function closeVoting(
+        string memory title
+    ) external onlyManager returns (Lib.TopicUpdate memory) {
         require(topicExists(title), "Topic does not exists");
 
         Lib.Topic memory topic = getTopic(title);
@@ -290,6 +320,14 @@ contract Condominium is ICondominium {
                 manager = topic.responsible;
             }
         }
+
+        return
+            Lib.TopicUpdate({
+                id: topicId,
+                title: topic.title,
+                category: topic.category,
+                status: newStatus
+            });
     }
 
     function numberOfVotes(string memory title) public view returns (uint256) {
@@ -311,7 +349,7 @@ contract Condominium is ICondominium {
     function transfer(
         string memory topicTitle,
         uint256 amount
-    ) external onlyManager {
+    ) external onlyManager returns (Lib.TransferReceipt memory) {
         require(address(this).balance >= amount, "Insufficient funds");
 
         Lib.Topic memory topic = getTopic(topicTitle);
@@ -330,5 +368,20 @@ contract Condominium is ICondominium {
 
         bytes32 topicId = keccak256(bytes(topicTitle));
         topics[topicId].status = Lib.Status.SPENT;
+
+        return
+            Lib.TransferReceipt({
+                to: topic.responsible,
+                amount: amount,
+                topic: topicTitle
+            });
+    }
+
+    function getManager() external view returns (address) {
+        return manager;
+    }
+
+    function getQuota() external view returns (uint256) {
+        return monthlyQuota;
     }
 }
