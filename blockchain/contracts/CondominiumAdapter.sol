@@ -94,4 +94,11 @@ contract CondominiumAdapter {
     function payQuota(uint16 residenceId) external payable upgraded {
         return implementation.payQuota{value: msg.value}(residenceId);
     }
+
+    function transfer(
+        string memory topicTitle,
+        uint256 amount
+    ) external upgraded {
+        return implementation.transfer(topicTitle, amount);
+    }
 }
