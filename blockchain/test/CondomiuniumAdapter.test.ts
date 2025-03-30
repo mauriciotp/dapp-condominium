@@ -515,4 +515,43 @@ describe('CondominiumAdapter', function () {
       condominiumAdapter.transfer('topic 1', 100)
     ).to.be.revertedWith('You must upgrade first')
   })
+
+  it('Should get manager', async function () {
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    expect(await condominiumAdapter.getManager()).to.equal(manager.address)
+  })
+
+  it('Should get quota', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    expect(await condominiumAdapter.getQuota()).to.equal(parseEther('0.001'))
+  })
+
+  it('Should NOT get manager (upgraded)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.getManager()).to.be.revertedWith(
+      'You must upgrade first'
+    )
+  })
+
+  it('Should NOT get quota (upgraded)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.getQuota()).to.be.revertedWith(
+      'You must upgrade first'
+    )
+  })
 })

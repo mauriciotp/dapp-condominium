@@ -133,4 +133,12 @@ contract CondominiumAdapter {
 
         emit Transfer(receipt.to, receipt.amount, receipt.topic);
     }
+
+    function getManager() external view upgraded returns (address) {
+        return implementation.getManager();
+    }
+
+    function getQuota() external view upgraded returns (uint256) {
+        return implementation.getQuota();
+    }
 }
