@@ -1,12 +1,22 @@
 import MetaMaskLogo from '../assets/metamask.svg'
 import CondominiumLogo from '../assets/logo192.png'
 import { useNavigate } from 'react-router'
+import { doLogin } from '../services/Web3Service'
+import { useState } from 'react'
 
 export function Login() {
+  const [message, setMessage] = useState('')
   const navigate = useNavigate()
 
-  function handleLogin() {
-    navigate('/topics')
+  async function handleLogin() {
+    try {
+      await doLogin()
+      navigate('/topics')
+    } catch (e) {
+      if (e instanceof Error) {
+        setMessage(e.message)
+      }
+    }
   }
 
   return (
@@ -32,6 +42,7 @@ export function Login() {
           </span>
         </button>
         <div className="py-4">
+          {message && <p className="mb-4 text-sm text-red-400">{message}</p>}
           <p className="text-sm text-gray-600">
             Don't have an account? Ask to the{' '}
             <a
