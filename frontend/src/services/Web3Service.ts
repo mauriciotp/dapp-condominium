@@ -46,3 +46,8 @@ export async function doLogin(): Promise<LoginResult> {
     profile: parseInt(localStorage.getItem('profile') || '0'),
   }
 }
+
+export function doLogout() {
+  localStorage.removeItem('account')
+  localStorage.removeItem('profile')
+}
