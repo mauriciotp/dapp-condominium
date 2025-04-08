@@ -151,6 +151,39 @@ describe('CondominiumAdapter', function () {
     ).to.be.revertedWith('You must upgrade first')
   })
 
+  it('Should NOT get resident (upgrade)', async function () {
+    const { condominiumAdapter, resident } =
+      await loadFixture(deployAdapterFixture)
+
+    await expect(
+      condominiumAdapter.getResident(resident.address)
+    ).to.be.revertedWith('You must upgrade first')
+  })
+
+  it('Should get residents', async function () {
+    const { condominiumAdapter, resident } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await condominiumAdapter.addResident(resident.address, 2505)
+
+    const result = await condominiumAdapter.getResidents(1, 10)
+
+    expect(result.residents[0].wallet).to.equal(resident.address)
+  })
+
+  it('Should NOT get residents (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.getResidents(1, 10)).to.be.revertedWith(
+      'You must upgrade first'
+    )
+  })
+
   it('Should set counselor', async function () {
     const { condominiumAdapter, resident } =
       await loadFixture(deployAdapterFixture)
@@ -163,7 +196,9 @@ describe('CondominiumAdapter', function () {
 
     await condominiumAdapter.setCounselor(resident.address, true)
 
-    expect(await condominium.counselors(resident.address)).to.equal(true)
+    const newResident = await condominiumAdapter.getResident(resident.address)
+
+    expect(newResident.isCounselor).to.equal(true)
   })
 
   it('Should NOT set counselor (upgrade)', async function () {
@@ -207,6 +242,76 @@ describe('CondominiumAdapter', function () {
         manager.address
       )
     ).to.be.revertedWith('You must upgrade first')
+  })
+
+  it('Should get topic', async function () {
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+
+    const topic = await condominiumAdapter.getTopic('topic 1')
+
+    expect(topic.description).to.equal('description 1')
+  })
+
+  it('Should NOT get topic (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.getTopic('topic 1')).to.be.revertedWith(
+      'You must upgrade first'
+    )
+  })
+
+  it('Should get topics', async function () {
+    const { condominiumAdapter, manager } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+
+    const result = await condominiumAdapter.getTopics(1, 10)
+
+    expect(result.topics[0].description).to.equal('description 1')
+  })
+
+  it('Should get topics (empty)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    const result = await condominiumAdapter.getTopics(1, 10)
+
+    expect(result.topics.length).to.equal(10)
+  })
+
+  it('Should NOT get topics (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.getTopics(1, 10)).to.be.revertedWith(
+      'You must upgrade first'
+    )
   })
 
   it('Should edit topic', async function () {
@@ -331,6 +436,41 @@ describe('CondominiumAdapter', function () {
     await residentInstance.vote('topic 1', Options.YES)
 
     expect(await condominium.numberOfVotes('topic 1')).to.equal(1)
+  })
+
+  it('Should get votes', async function () {
+    const { condominiumAdapter, manager, accounts } =
+      await loadFixture(deployAdapterFixture)
+    const { condominium } = await loadFixture(deployImplementationFixture)
+
+    const condominiumAddress = await condominium.getAddress()
+    await condominiumAdapter.upgrade(condominiumAddress)
+
+    await addResidents(condominiumAdapter, 1, accounts)
+    await condominiumAdapter.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+    await condominiumAdapter.openVoting('topic 1')
+
+    const residentInstance = condominiumAdapter.connect(accounts[0])
+
+    await residentInstance.vote('topic 1', Options.YES)
+
+    const votes = await condominiumAdapter.getVotes('topic 1')
+
+    expect(votes.length).to.equal(1)
+  })
+
+  it('Should NOT get votes (upgrade)', async function () {
+    const { condominiumAdapter } = await loadFixture(deployAdapterFixture)
+
+    await expect(condominiumAdapter.getVotes('topic 1')).to.be.revertedWith(
+      'You must upgrade first'
+    )
   })
 
   it('Should NOT vote (upgrade)', async function () {

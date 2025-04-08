@@ -1,5 +1,8 @@
 import { SignerWithAddress } from '@nomicfoundation/hardhat-ethers/signers'
-import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers'
+import {
+  loadFixture,
+  time,
+} from '@nomicfoundation/hardhat-toolbox/network-helpers'
 import { expect } from 'chai'
 import { ZeroAddress, parseEther } from 'ethers'
 import hre from 'hardhat'
@@ -108,10 +111,23 @@ describe('Condominium', function () {
     ).to.be.revertedWith('Residence does not exist')
   })
 
-  it('Should remove resident', async function () {
+  it('Should remove resident (latest)', async function () {
     const { condominium, resident } = await loadFixture(deployFixture)
 
     await condominium.addResident(resident.address, 2505)
+    await condominium.removeResident(resident.address)
+
+    expect(await condominium.isResident(resident.address)).to.equal(false)
+  })
+
+  it('Should remove resident (first)', async function () {
+    const { condominium, resident, accounts } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+    await condominium.addResident(accounts[0].address, 2504)
+
+    await condominium.setCounselor(accounts[0].address, true)
+
     await condominium.removeResident(resident.address)
 
     expect(await condominium.isResident(resident.address)).to.equal(false)
@@ -141,7 +157,7 @@ describe('Condominium', function () {
     ).to.be.revertedWith('A counselor cannot be removed')
   })
 
-  it('Should set counselor (true)', async function () {
+  it('Should add counselor', async function () {
     const { condominium, counselor, resident } =
       await loadFixture(deployFixture)
 
@@ -153,11 +169,13 @@ describe('Condominium', function () {
 
     await counselorInstance.addResident(resident, 2504)
 
-    expect(await condominium.counselors(counselor.address)).to.equal(true)
+    const newCounselor = await condominium.getResident(counselor.address)
+
+    expect(newCounselor.isCounselor).to.equal(true)
     expect(await condominium.isResident(resident.address)).to.equal(true)
   })
 
-  it('Should set counselor (false)', async function () {
+  it('Should remove counselor (latest)', async function () {
     const { condominium, counselor } = await loadFixture(deployFixture)
 
     await condominium.addResident(counselor.address, 2505)
@@ -166,10 +184,59 @@ describe('Condominium', function () {
 
     await condominium.setCounselor(counselor.address, false)
 
-    expect(await condominium.counselors(counselor.address)).to.equal(false)
+    const resident = await condominium.getResident(counselor.address)
+
+    expect(resident.isCounselor).to.equal(false)
   })
 
-  it('Should NOT set counselor (address)', async function () {
+  it('Should remove counselor (first)', async function () {
+    const { condominium, counselor, accounts } =
+      await loadFixture(deployFixture)
+
+    await condominium.addResident(counselor.address, 2505)
+    await condominium.addResident(accounts[0], 2504)
+
+    await condominium.setCounselor(counselor.address, true)
+    await condominium.setCounselor(accounts[0].address, true)
+
+    await condominium.setCounselor(counselor.address, false)
+
+    const resident = await condominium.getResident(counselor.address)
+
+    expect(resident.isCounselor).to.equal(false)
+  })
+
+  it('Should NOT remove counselor (address)', async function () {
+    const { condominium } = await loadFixture(deployFixture)
+
+    await expect(
+      condominium.setCounselor(ZeroAddress, false)
+    ).to.be.revertedWith('Invalid address')
+  })
+
+  it('Should NOT remove counselor (permission)', async function () {
+    const { condominium, resident, counselor } =
+      await loadFixture(deployFixture)
+
+    await condominium.addResident(counselor.address, 2505)
+    await condominium.setCounselor(counselor.address, true)
+
+    const residentInstance = condominium.connect(resident)
+
+    await expect(
+      residentInstance.setCounselor(counselor.address, false)
+    ).to.be.revertedWith('Only the manager can do this')
+  })
+
+  it('Should NOT remove counselor (exists)', async function () {
+    const { condominium, counselor } = await loadFixture(deployFixture)
+
+    await expect(
+      condominium.setCounselor(counselor.address, false)
+    ).to.be.revertedWith('Counselor not found')
+  })
+
+  it('Should NOT add counselor (address)', async function () {
     const { condominium } = await loadFixture(deployFixture)
 
     await expect(
@@ -177,7 +244,7 @@ describe('Condominium', function () {
     ).to.be.revertedWith('Invalid address')
   })
 
-  it('Should NOT set counselor (permission)', async function () {
+  it('Should NOT add counselor (permission)', async function () {
     const { condominium, resident } = await loadFixture(deployFixture)
 
     const residentInstance = condominium.connect(resident)
@@ -187,7 +254,7 @@ describe('Condominium', function () {
     ).to.be.revertedWith('Only the manager can do this')
   })
 
-  it('Should NOT set counselor (resident)', async function () {
+  it('Should NOT add counselor (resident)', async function () {
     const { condominium, counselor } = await loadFixture(deployFixture)
 
     await expect(condominium.setCounselor(counselor, true)).to.be.revertedWith(
@@ -195,28 +262,30 @@ describe('Condominium', function () {
     )
   })
 
-  it('Should delete counselor', async function () {
-    const { condominium, counselor } = await loadFixture(deployFixture)
+  it('Should NOT add counselor (exists)', async function () {
+    const { condominium, counselor, resident } =
+      await loadFixture(deployFixture)
 
     await condominium.addResident(counselor.address, 2505)
 
     await condominium.setCounselor(counselor.address, true)
 
-    await condominium.setCounselor(counselor.address, false)
-
-    expect(await condominium.counselors(counselor.address)).to.equal(false)
+    await expect(
+      condominium.setCounselor(resident.address, false)
+    ).to.be.revertedWith('Counselor not found')
   })
 
   it('Should change manager', async function () {
-    const { condominium, accounts } = await loadFixture(deployFixture)
+    const { condominium, manager, accounts } = await loadFixture(deployFixture)
 
+    await condominium.addResident(manager.address, 2505)
     await addResidents(condominium, 15, accounts)
     await condominium.addTopic(
       'topic 1',
       'description 1',
       Category.CHANGE_MANAGER,
       0,
-      accounts[1]
+      '0x1234567890AbcdEF1234567890aBcdef12345678'
     )
     await condominium.openVoting('topic 1')
 
@@ -224,7 +293,9 @@ describe('Condominium', function () {
 
     await condominium.closeVoting('topic 1')
 
-    expect(await condominium.manager()).to.equal(accounts[1].address)
+    expect(await condominium.manager()).to.equal(
+      '0x1234567890AbcdEF1234567890aBcdef12345678'
+    )
   })
 
   it('Should change quota', async function () {
@@ -260,6 +331,30 @@ describe('Condominium', function () {
     )
 
     expect(await condominium.topicExists('topic 1')).to.equal(true)
+  })
+
+  it('Should get topic', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+
+    await condominium.addTopic(
+      'topic 2',
+      'description 2',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+
+    const topic = await condominium.getTopic('topic 2')
+
+    expect(topic.title).to.equal('topic 2')
   })
 
   it('Should NOT add topic (amount)', async function () {
@@ -422,12 +517,36 @@ describe('Condominium', function () {
     ).to.be.revertedWith('Only IDLE topics can be edited')
   })
 
-  it('Should remove topic', async function () {
+  it('Should remove topic (latest)', async function () {
     const { condominium, manager } = await loadFixture(deployFixture)
 
     await condominium.addTopic(
       'topic 1',
       'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+
+    await condominium.removeTopic('topic 1')
+
+    expect(await condominium.topicExists('topic 1')).to.equal(false)
+  })
+
+  it('Should remove topic (first)', async function () {
+    const { condominium, manager } = await loadFixture(deployFixture)
+
+    await condominium.addTopic(
+      'topic 1',
+      'description 1',
+      Category.DECISION,
+      0,
+      manager.address
+    )
+
+    await condominium.addTopic(
+      'topic 2',
+      'description 2',
       Category.DECISION,
       0,
       manager.address
@@ -835,5 +954,30 @@ describe('Condominium', function () {
     await expect(condominium.transfer('topic 1', 101)).to.be.revertedWith(
       'The amount must be less or equal the APPROVED topic'
     )
+  })
+
+  it('Should pay quota', async function () {
+    const { condominium, resident } = await loadFixture(deployFixture)
+
+    await condominium.addResident(resident.address, 2505)
+
+    const residentInstance = condominium.connect(resident)
+
+    await residentInstance.payQuota(2505, { value: parseEther('0.001') })
+
+    const residentBefore = await condominium.getResident(resident.address)
+
+    await time.setNextBlockTimestamp(
+      Number.parseInt(`${Date.now() / 1000 + 31 * 24 * 60 * 60}`)
+    )
+
+    await residentInstance.payQuota(2505, { value: parseEther('0.001') })
+
+    const residentAfter = await condominium.getResident(resident.address)
+
+    const firstPaymentPlusThirtyDays =
+      residentBefore.nextPayment + 30n * 24n * 60n * 60n
+
+    expect(residentAfter.nextPayment).to.equal(firstPaymentPlusThirtyDays)
   })
 })

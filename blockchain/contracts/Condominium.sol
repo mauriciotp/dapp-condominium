@@ -192,10 +192,7 @@ contract Condominium is ICondominium {
         residents[_residentIndex[counselor]].isCounselor = false;
     }
 
-    function setCounselor(
-        address resident,
-        bool isEntering
-    ) external onlyManager validAddress(resident) {
+    function setCounselor(address resident, bool isEntering) external {
         if (isEntering) {
             _addCounselor(resident);
         } else _removeCounselor(resident);
