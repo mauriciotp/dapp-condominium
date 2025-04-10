@@ -33,11 +33,21 @@ export async function doLogin(): Promise<LoginResult> {
   if (!accounts || !accounts.length)
     throw new Error('Wallet not found/allowed.')
 
-  const manager = await contract.read.getManager()
-  const isManager = manager === accounts[0]
+  const resident = await contract.read.getResident([accounts[0]])
+  let isManager = resident.isManager
+
+  if (!isManager && resident.residence > 0) {
+    if (resident.isCounselor)
+      localStorage.setItem('profile', `${Profile.COUNSELOR}`)
+    else localStorage.setItem('profile', `${Profile.RESIDENT}`)
+  } else if (!isManager && !resident.residence) {
+    const manager = await contract.read.getManager()
+    isManager = accounts[0] === manager
+  }
 
   if (isManager) localStorage.setItem('profile', `${Profile.MANAGER}`)
-  else localStorage.setItem('profile', `${Profile.RESIDENT}`)
+  else if (localStorage.getItem('profile') === null)
+    throw new Error('Unauthorized')
 
   localStorage.setItem('account', accounts[0])
 

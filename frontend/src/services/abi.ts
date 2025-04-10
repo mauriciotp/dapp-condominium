@@ -214,6 +214,305 @@ export const abi = [
   {
     inputs: [
       {
+        internalType: 'address',
+        name: 'resident',
+        type: 'address',
+      },
+    ],
+    name: 'getResident',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'address',
+            name: 'wallet',
+            type: 'address',
+          },
+          {
+            internalType: 'uint16',
+            name: 'residence',
+            type: 'uint16',
+          },
+          {
+            internalType: 'bool',
+            name: 'isCounselor',
+            type: 'bool',
+          },
+          {
+            internalType: 'bool',
+            name: 'isManager',
+            type: 'bool',
+          },
+          {
+            internalType: 'uint256',
+            name: 'nextPayment',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct CondominiumLib.Resident',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'page',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'pageSize',
+        type: 'uint256',
+      },
+    ],
+    name: 'getResidents',
+    outputs: [
+      {
+        components: [
+          {
+            components: [
+              {
+                internalType: 'address',
+                name: 'wallet',
+                type: 'address',
+              },
+              {
+                internalType: 'uint16',
+                name: 'residence',
+                type: 'uint16',
+              },
+              {
+                internalType: 'bool',
+                name: 'isCounselor',
+                type: 'bool',
+              },
+              {
+                internalType: 'bool',
+                name: 'isManager',
+                type: 'bool',
+              },
+              {
+                internalType: 'uint256',
+                name: 'nextPayment',
+                type: 'uint256',
+              },
+            ],
+            internalType: 'struct CondominiumLib.Resident[]',
+            name: 'residents',
+            type: 'tuple[]',
+          },
+          {
+            internalType: 'uint256',
+            name: 'total',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct CondominiumLib.ResidentPage',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'string',
+        name: 'title',
+        type: 'string',
+      },
+    ],
+    name: 'getTopic',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'string',
+            name: 'title',
+            type: 'string',
+          },
+          {
+            internalType: 'string',
+            name: 'description',
+            type: 'string',
+          },
+          {
+            internalType: 'enum CondominiumLib.Status',
+            name: 'status',
+            type: 'uint8',
+          },
+          {
+            internalType: 'enum CondominiumLib.Category',
+            name: 'category',
+            type: 'uint8',
+          },
+          {
+            internalType: 'uint256',
+            name: 'amount',
+            type: 'uint256',
+          },
+          {
+            internalType: 'address',
+            name: 'responsible',
+            type: 'address',
+          },
+          {
+            internalType: 'uint256',
+            name: 'createdDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'startDate',
+            type: 'uint256',
+          },
+          {
+            internalType: 'uint256',
+            name: 'endDate',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct CondominiumLib.Topic',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'uint256',
+        name: 'page',
+        type: 'uint256',
+      },
+      {
+        internalType: 'uint256',
+        name: 'pageSize',
+        type: 'uint256',
+      },
+    ],
+    name: 'getTopics',
+    outputs: [
+      {
+        components: [
+          {
+            components: [
+              {
+                internalType: 'string',
+                name: 'title',
+                type: 'string',
+              },
+              {
+                internalType: 'string',
+                name: 'description',
+                type: 'string',
+              },
+              {
+                internalType: 'enum CondominiumLib.Status',
+                name: 'status',
+                type: 'uint8',
+              },
+              {
+                internalType: 'enum CondominiumLib.Category',
+                name: 'category',
+                type: 'uint8',
+              },
+              {
+                internalType: 'uint256',
+                name: 'amount',
+                type: 'uint256',
+              },
+              {
+                internalType: 'address',
+                name: 'responsible',
+                type: 'address',
+              },
+              {
+                internalType: 'uint256',
+                name: 'createdDate',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'startDate',
+                type: 'uint256',
+              },
+              {
+                internalType: 'uint256',
+                name: 'endDate',
+                type: 'uint256',
+              },
+            ],
+            internalType: 'struct CondominiumLib.Topic[]',
+            name: 'topics',
+            type: 'tuple[]',
+          },
+          {
+            internalType: 'uint256',
+            name: 'total',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct CondominiumLib.TopicPage',
+        name: '',
+        type: 'tuple',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'string',
+        name: 'topicTitle',
+        type: 'string',
+      },
+    ],
+    name: 'getVotes',
+    outputs: [
+      {
+        components: [
+          {
+            internalType: 'address',
+            name: 'resident',
+            type: 'address',
+          },
+          {
+            internalType: 'uint16',
+            name: 'residence',
+            type: 'uint16',
+          },
+          {
+            internalType: 'enum CondominiumLib.Options',
+            name: 'option',
+            type: 'uint8',
+          },
+          {
+            internalType: 'uint256',
+            name: 'timestamp',
+            type: 'uint256',
+          },
+        ],
+        internalType: 'struct CondominiumLib.Vote[]',
+        name: '',
+        type: 'tuple[]',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
         internalType: 'string',
         name: 'title',
         type: 'string',

@@ -23,6 +23,32 @@ export function Router() {
     }
   }
 
+  function CouncilRoute({ children }: { children: React.ReactNode }) {
+    const isAuth = localStorage.getItem('account') !== null
+    const isResident =
+      parseInt(localStorage.getItem('profile') || '0') === Profile.RESIDENT
+
+    if (isAuth && !isResident) {
+      return children
+    } else {
+      doLogout()
+      return <Navigate to="/" />
+    }
+  }
+
+  function ResidentRoute({ children }: { children: React.ReactNode }) {
+    const isAuth = localStorage.getItem('account') !== null
+    const isResident =
+      parseInt(localStorage.getItem('profile') || '0') === Profile.RESIDENT
+
+    if (isAuth && isResident) {
+      return children
+    } else {
+      doLogout()
+      return <Navigate to="/" />
+    }
+  }
+
   return (
     <BrowserRouter>
       <Routes>
