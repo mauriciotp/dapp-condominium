@@ -1,3 +1,10 @@
+import { Sidebar } from '../components/Sidebar'
+
 export function Transfer() {
-  return <div>Transfer</div>
+  return (
+    <>
+      <Sidebar />
+      <div>Transfer</div>
+    </>
+  )
 }
