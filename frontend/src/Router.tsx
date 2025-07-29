@@ -3,6 +3,9 @@ import { Login } from './pages/Login'
 import { Topics } from './pages/Topics'
 import { Transfer } from './pages/Transfer'
 import { doLogout, Profile } from './services/Web3Service'
+import { Settings } from './pages/Settings'
+import { Residents } from './pages/residents'
+import { ResidentPage } from './pages/residents/ResidentPage'
 
 export function Router() {
   function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -67,6 +70,30 @@ export function Router() {
             <ManagerRoute>
               <Transfer />
             </ManagerRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ManagerRoute>
+              <Settings />
+            </ManagerRoute>
+          }
+        />
+        <Route
+          path="/residents/new"
+          element={
+            <CouncilRoute>
+              <ResidentPage />
+            </CouncilRoute>
+          }
+        />
+        <Route
+          path="/residents"
+          element={
+            <CouncilRoute>
+              <Residents />
+            </CouncilRoute>
           }
         />
       </Routes>

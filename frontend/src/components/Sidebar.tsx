@@ -39,7 +39,7 @@ export function Sidebar() {
       <div className="grow">
         <ul className="flex flex-col gap-2">
           <li>
-            <SidebarLink to="/topics" active>
+            <SidebarLink to="/topics">
               <MdSpaceDashboard size={24} />
               Topics
             </SidebarLink>
