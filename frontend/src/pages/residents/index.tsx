@@ -4,8 +4,30 @@ import { HiUsers } from 'react-icons/hi'
 import { SaveButton } from '../../components/SaveButton'
 import { FaPlus } from 'react-icons/fa'
 import { Link } from 'react-router'
+import { Alert } from '../../components/Alert'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router'
 
 export function Residents() {
+  const [message, setMessage] = useState<string>('')
+  const [error, setError] = useState<string>('')
+
+  function useQuery() {
+    return new URLSearchParams(useLocation().search)
+  }
+
+  const query = useQuery()
+
+  useEffect(() => {
+    const tx = query.get('tx')
+
+    if (tx) {
+      setMessage(
+        'Your transaction is being processed. It may take minutes to have effect.',
+      )
+    }
+  }, [])
+
   return (
     <div className="flex">
       <Sidebar />
@@ -18,7 +40,10 @@ export function Residents() {
             </h2>
           </header>
 
-          <div>
+          {message ? <Alert message={message} type="success" /> : null}
+          {error ? <Alert message={error} type="danger" /> : null}
+
+          <div className="mt-2">
             <table>Users table</table>
             <Link to="/residents/new">
               <SaveButton icon={FaPlus}>Add New Resident</SaveButton>
