@@ -7,6 +7,7 @@ import { Footer } from '../components/Footer'
 import { Input } from '../components/Input'
 import { SaveButton } from '../components/SaveButton'
 import { FaSave } from 'react-icons/fa'
+import { Loader } from '../components/Loader'
 
 export function Settings() {
   const [contractAddress, setContractAddress] = useState<string>('')
@@ -71,14 +72,7 @@ export function Settings() {
             onSubmit={handleFormSubmit}
             className="flex max-w-1/2 flex-col gap-4 [&>div]:not-last:flex [&>div]:not-last:flex-col [&>div]:not-last:gap-2"
           >
-            {isLoading && (
-              <div>
-                <p className="flex items-center gap-2">
-                  <BsHourglassSplit size={18} />
-                  Loading...
-                </p>
-              </div>
-            )}
+            {isLoading && <Loader />}
             <div>
               <label htmlFor="adapter">Adapter Address</label>
               <input

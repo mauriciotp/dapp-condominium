@@ -3,15 +3,20 @@ import { Sidebar } from '../../components/Sidebar'
 import { HiUsers } from 'react-icons/hi'
 import { SaveButton } from '../../components/SaveButton'
 import { FaPlus } from 'react-icons/fa'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { Alert } from '../../components/Alert'
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router'
 import { ResidentRow } from './ResidentRow'
-import { getResidents, Resident } from '../../services/Web3Service'
-import { BsHourglassSplit } from 'react-icons/bs'
+import {
+  getResidents,
+  removeResident,
+  Resident,
+} from '../../services/Web3Service'
+import { Loader } from '../../components/Loader'
 
 export function Residents() {
+  const navigate = useNavigate()
   const [residents, setResidents] = useState<Resident[]>([])
   const [message, setMessage] = useState<string>('')
   const [error, setError] = useState<string>('')
@@ -24,8 +29,8 @@ export function Residents() {
   const query = useQuery()
 
   useEffect(() => {
-    setIsLoading(true)
-    async function fetchResidents() {
+    ;(async () => {
+      setIsLoading(true)
       try {
         const result = await getResidents()
         setResidents(result.residents)
@@ -35,18 +40,32 @@ export function Residents() {
         const err = e as Error
         setError(err.message)
       }
-    }
-
-    fetchResidents()
+    })()
 
     const tx = query.get('tx')
-
     if (tx) {
       setMessage(
         'Your transaction is being processed. It may take minutes to have effect.',
       )
     }
   }, [])
+
+  function onDeleteResident(wallet: string) {
+    ;(async () => {
+      setIsLoading(true)
+      setMessage('')
+      setError('')
+      try {
+        const transactionReceipt = await removeResident(wallet)
+        setIsLoading(false)
+        navigate(`/residents?tx=${transactionReceipt.transactionHash}`)
+      } catch (e) {
+        setIsLoading(false)
+        const err = e as Error
+        setError(err.message)
+      }
+    })()
+  }
 
   return (
     <div className="flex">
@@ -63,14 +82,7 @@ export function Residents() {
           {message ? <Alert message={message} type="success" /> : null}
           {error ? <Alert message={error} type="danger" /> : null}
 
-          {isLoading && (
-            <div>
-              <p className="flex items-center gap-2">
-                <BsHourglassSplit size={18} />
-                Loading...
-              </p>
-            </div>
-          )}
+          {isLoading && <Loader />}
           <div className="mt-2">
             <table className="mb-8 w-full text-left">
               <thead className="border-b border-b-gray-200 text-xs text-gray-400 uppercase">
@@ -88,7 +100,9 @@ export function Residents() {
                       <ResidentRow
                         key={resident.wallet}
                         data={resident}
-                        onDeleteResident={() => alert(resident.wallet)}
+                        onDeleteResident={() =>
+                          onDeleteResident(resident.wallet)
+                        }
                       />
                     ))
                   : null}

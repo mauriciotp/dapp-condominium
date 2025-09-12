@@ -134,6 +134,23 @@ export async function addResident(wallet: string, residenceId: number) {
   return transactionReceipt
 }
 
+export async function removeResident(wallet: string) {
+  if (getProfile() !== Profile.MANAGER)
+    throw new Error('You do not have permission.')
+
+  const account = localStorage.getItem('account') as `0x${string}`
+
+  const hash = await contract.write.removeResident([wallet as `0x${string}`], {
+    account,
+  })
+
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  })
+
+  return transactionReceipt
+}
+
 export type ResidentPage = {
   residents: Resident[]
   total: number
