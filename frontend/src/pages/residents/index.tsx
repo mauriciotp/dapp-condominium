@@ -7,10 +7,15 @@ import { Link } from 'react-router'
 import { Alert } from '../../components/Alert'
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router'
+import { ResidentRow } from './ResidentRow'
+import { getResidents, Resident } from '../../services/Web3Service'
+import { BsHourglassSplit } from 'react-icons/bs'
 
 export function Residents() {
+  const [residents, setResidents] = useState<Resident[]>([])
   const [message, setMessage] = useState<string>('')
   const [error, setError] = useState<string>('')
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
   function useQuery() {
     return new URLSearchParams(useLocation().search)
@@ -19,6 +24,21 @@ export function Residents() {
   const query = useQuery()
 
   useEffect(() => {
+    setIsLoading(true)
+    async function fetchResidents() {
+      try {
+        const result = await getResidents()
+        setResidents(result.residents)
+        setIsLoading(false)
+      } catch (e) {
+        setIsLoading(false)
+        const err = e as Error
+        setError(err.message)
+      }
+    }
+
+    fetchResidents()
+
     const tx = query.get('tx')
 
     if (tx) {
@@ -43,9 +63,39 @@ export function Residents() {
           {message ? <Alert message={message} type="success" /> : null}
           {error ? <Alert message={error} type="danger" /> : null}
 
+          {isLoading && (
+            <div>
+              <p className="flex items-center gap-2">
+                <BsHourglassSplit size={18} />
+                Loading...
+              </p>
+            </div>
+          )}
           <div className="mt-2">
-            <table>Users table</table>
-            <Link to="/residents/new">
+            <table className="mb-8 w-full text-left">
+              <thead className="border-b border-b-gray-200 text-xs text-gray-400 uppercase">
+                <tr className="[&>th]:pb-4">
+                  <th>Wallet</th>
+                  <th>Residence</th>
+                  <th>Is Counselor?</th>
+                  <th>Next Payment</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {residents && residents.length
+                  ? residents.map((resident) => (
+                      <ResidentRow
+                        key={resident.wallet}
+                        data={resident}
+                        onDeleteResident={() => alert(resident.wallet)}
+                      />
+                    ))
+                  : null}
+              </tbody>
+            </table>
+
+            <Link to="/residents/new" className="inline-block">
               <SaveButton icon={FaPlus}>Add New Resident</SaveButton>
             </Link>
           </div>

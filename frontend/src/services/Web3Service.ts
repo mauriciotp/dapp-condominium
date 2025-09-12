@@ -133,3 +133,36 @@ export async function addResident(wallet: string, residenceId: number) {
 
   return transactionReceipt
 }
+
+export type ResidentPage = {
+  residents: Resident[]
+  total: number
+}
+
+export async function getResidents(page: number = 1, pageSize: number = 10) {
+  const result = await contract.read.getResidents([
+    BigInt(page),
+    BigInt(pageSize),
+  ])
+
+  const residents: Resident[] = result.residents
+    .filter((r) => r.residence)
+    .sort((a, b) => {
+      if (a.residence > b.residence) return 1
+      return -1
+    })
+    .map((resident) => {
+      return {
+        wallet: resident.wallet,
+        residence: Number(resident.residence),
+        isCounselor: resident.isCounselor,
+        isManager: resident.isManager,
+        nextPayment: Number(resident.nextPayment),
+      }
+    })
+
+  return {
+    residents,
+    total: Number(result.total),
+  } as ResidentPage
+}

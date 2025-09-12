@@ -14,7 +14,6 @@ export function ResidentPage() {
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [resident, setResident] = useState<Resident>({} as Resident)
-  console.log(resident)
 
   function handleResidentChange(e: ChangeEvent<HTMLInputElement>) {
     setResident((prevState) => ({
