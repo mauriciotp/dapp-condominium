@@ -1,19 +1,53 @@
 import { Input } from '../../components/Input'
 import { SaveButton } from '../../components/SaveButton'
-import { useNavigate } from 'react-router'
-import { ChangeEvent, FormEvent, useState } from 'react'
+import { useNavigate, useParams } from 'react-router'
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import { Sidebar } from '../../components/Sidebar'
 import { HiUsers } from 'react-icons/hi'
 import { Footer } from '../../components/Footer'
 import { FaSave } from 'react-icons/fa'
 import { SwitchInput } from '../../components/SwitchButton'
-import { addResident, isManager, Resident } from '../../services/Web3Service'
+import {
+  addResident,
+  doLogout,
+  getResident,
+  isManager,
+  isResident,
+  Resident,
+  setCounselor,
+} from '../../services/Web3Service'
+import { Loader } from '../../components/Loader'
 
 export function ResidentPage() {
   const navigate = useNavigate()
+
+  let { wallet } = useParams()
+
   const [message, setMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [resident, setResident] = useState<Resident>({} as Resident)
+
+  useEffect(() => {
+    if (isResident()) {
+      doLogout()
+      navigate('/')
+    }
+
+    if (wallet) {
+      setIsLoading(true)
+      ;(async () => {
+        try {
+          const resident = await getResident(wallet)
+          setResident(resident)
+          setIsLoading(false)
+        } catch (e) {
+          setIsLoading(false)
+          const err = e as Error
+          setMessage(err.message)
+        }
+      })()
+    }
+  }, [wallet])
 
   function handleResidentChange(e: ChangeEvent<HTMLInputElement>) {
     setResident((prevState) => ({
@@ -28,17 +62,32 @@ export function ResidentPage() {
     if (resident) {
       try {
         setMessage('Saving resident, please wait...')
-        const transactionReceipt = await addResident(
-          resident.wallet,
-          resident.residence,
-        )
 
-        const transactionHash = transactionReceipt.transactionHash
+        if (!wallet) {
+          const transactionReceipt = await addResident(
+            resident.wallet,
+            resident.residence,
+          )
 
-        setMessage(
-          `Resident saved! It may take some minutes to have effect. Transaction Hash: `,
-        )
-        navigate(`/residents?tx=${transactionHash}`)
+          const transactionHash = transactionReceipt.transactionHash
+
+          setMessage(
+            `Resident saved! It may take some minutes to have effect. Transaction Hash: `,
+          )
+          navigate(`/residents?tx=${transactionHash}`)
+        } else {
+          const transactionReceipt = await setCounselor(
+            resident.wallet,
+            !!resident.isCounselor,
+          )
+
+          const transactionHash = transactionReceipt.transactionHash
+
+          setMessage(
+            `Resident saved! It may take some minutes to have effect. Transaction Hash: `,
+          )
+          navigate(`/residents?tx=${transactionHash}`)
+        }
       } catch (err) {
         if (err instanceof Error) {
           setMessage(err.message)
@@ -46,6 +95,14 @@ export function ResidentPage() {
       }
     }
   }
+
+  function getNextPayment() {
+    const dateMs = resident.nextPayment * 1000
+
+    if (!dateMs) return 'Never Payed'
+    return new Date(dateMs).toDateString()
+  }
+
   return (
     <div className="flex">
       <Sidebar />
@@ -57,6 +114,8 @@ export function ResidentPage() {
               New Resident
             </h2>
           </header>
+
+          {isLoading ? <Loader /> : null}
 
           <form
             onSubmit={handleFormSubmit}
@@ -70,19 +129,32 @@ export function ResidentPage() {
                 placeholder="0x00..."
                 value={resident.wallet || ''}
                 onChange={handleResidentChange}
+                disabled={!!wallet}
               />
             </div>
             <div className="flex flex-col gap-2">
-              <label htmlFor="residence">Residence Id</label>
+              <label htmlFor="residence">Residence Id (block+apartment)</label>
               <Input
                 type="text"
                 id="residence"
                 placeholder="1101"
                 value={resident.residence || ''}
                 onChange={handleResidentChange}
+                disabled={!!wallet}
               />
             </div>
-            {isManager() ? (
+            {wallet ? (
+              <div className="flex flex-col gap-2">
+                <label htmlFor="nextPayment">Next Payment</label>
+                <Input
+                  type="text"
+                  id="nextPayment"
+                  value={getNextPayment()}
+                  disabled={true}
+                />
+              </div>
+            ) : null}
+            {isManager() && wallet ? (
               <div>
                 <SwitchInput
                   id="isCounselor"

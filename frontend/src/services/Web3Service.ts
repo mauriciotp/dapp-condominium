@@ -55,6 +55,10 @@ export function isManager() {
   return parseInt(localStorage.getItem('profile') || '0') === Profile.MANAGER
 }
 
+export function isResident() {
+  return parseInt(localStorage.getItem('profile') || '0') === Profile.RESIDENT
+}
+
 export async function doLogin(): Promise<LoginResult> {
   const accounts = await client.requestAddresses()
 
@@ -149,6 +153,38 @@ export async function removeResident(wallet: string) {
   })
 
   return transactionReceipt
+}
+
+export async function setCounselor(wallet: string, isEntering: boolean) {
+  if (getProfile() !== Profile.MANAGER)
+    throw new Error('You do not have permission.')
+
+  const account = localStorage.getItem('account') as `0x${string}`
+
+  const hash = await contract.write.setCounselor(
+    [wallet as `0x${string}`, isEntering],
+    {
+      account,
+    },
+  )
+
+  const transactionReceipt = await publicClient.waitForTransactionReceipt({
+    hash,
+  })
+
+  return transactionReceipt
+}
+
+export async function getResident(wallet: string) {
+  const result = await contract.read.getResident([wallet as `0x${string}`])
+
+  return {
+    wallet: result.wallet,
+    residence: result.residence,
+    isCounselor: result.isCounselor,
+    isManager: result.isManager,
+    nextPayment: Number(result.nextPayment),
+  } as Resident
 }
 
 export type ResidentPage = {
