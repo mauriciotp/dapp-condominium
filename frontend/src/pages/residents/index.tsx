@@ -14,6 +14,7 @@ import {
   Resident,
 } from '../../services/Web3Service'
 import { Loader } from '../../components/Loader'
+import { Pagination } from '../../components/Pagination'
 
 export function Residents() {
   const navigate = useNavigate()
@@ -21,6 +22,7 @@ export function Residents() {
   const [message, setMessage] = useState<string>('')
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [count, setCount] = useState<number>(0)
 
   function useQuery() {
     return new URLSearchParams(useLocation().search)
@@ -32,8 +34,9 @@ export function Residents() {
     ;(async () => {
       setIsLoading(true)
       try {
-        const result = await getResidents()
+        const result = await getResidents(parseInt(query.get('page') || '1'))
         setResidents(result.residents)
+        setCount(result.total)
         setIsLoading(false)
       } catch (e) {
         setIsLoading(false)
@@ -109,7 +112,9 @@ export function Residents() {
               </tbody>
             </table>
 
-            <Link to="/residents/new" className="inline-block">
+            <Pagination count={count} pageSize={10} />
+
+            <Link to="/residents/new" className="mt-4 inline-block">
               <SaveButton icon={FaPlus}>Add New Resident</SaveButton>
             </Link>
           </div>
